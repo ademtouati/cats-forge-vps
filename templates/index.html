@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAT's Forge - VPS Edition</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a0a0f; color: #c8c8d4; font-family: 'Courier New', monospace; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        header { text-align: center; padding: 20px 0; border-bottom: 2px solid #2a2a3a; margin-bottom: 30px; }
+        header h1 { font-size: 3rem; color: #ff6b6b; text-shadow: 0 0 20px rgba(255, 107, 107, 0.3); }
+        .main-grid { display: grid; grid-template-columns: 380px 1fr; gap: 30px; }
+        .control-panel { background: #12121a; border: 1px solid #2a2a3a; border-radius: 12px; padding: 25px; }
+        .control-group { margin-bottom: 18px; }
+        .control-group label { display: block; font-size: 0.8rem; color: #8888aa; text-transform: uppercase; margin-bottom: 5px; }
+        .control-group select, .control-group input { width: 100%; padding: 10px; background: #1a1a2a; border: 1px solid #2a2a3a; border-radius: 6px; color: #c8c8d4; font-family: monospace; }
+        .generate-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, #ff6b6b, #ee5a24); border: none; border-radius: 8px; color: white; font-family: monospace; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .generate-btn:hover { transform: scale(1.02); box-shadow: 0 0 40px rgba(255, 107, 107, 0.3); }
+        .status { margin-top: 15px; padding: 10px; border-radius: 6px; text-align: center; }
+        .gallery-panel { background: #12121a; border: 1px solid #2a2a3a; border-radius: 12px; padding: 25px; min-height: 600px; }
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .image-card { background: #1a1a2a; border-radius: 8px; overflow: hidden; border: 1px solid #2a2a3a; }
+        .image-card img { width: 100%; height: auto; display: block; }
+        .image-card .seed-info { padding: 10px; font-size: 0.8rem; color: #666688; text-align: center; }
+        .empty-state { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #444466; padding: 100px 0; }
+        .empty-state span { font-size: 4rem; margin-bottom: 20px; opacity: 0.3; }
+        @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header><h1>⚡ CAT'S FORGE ⚡</h1><p>VPS Edition — SDXL Power</p></header>
+    <div class="main-grid">
+        <div class="control-panel">
+            <div class="control-group">
+                <label>Body Type</label>
+                <select id="bodyType">
+                    <option value="lean">Lean</option>
+                    <option value="athletic" selected>Athletic</option>
+                    <option value="muscular">Muscular</option>
+                    <option value="stocky">Stocky</option>
+                    <option value="heavyset">Heavyset</option>
+                    <option value="twink">Twink</option>
+                    <option value="bear">Bear</option>
+                    <option value="dadbody">Dad Bod</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Custom Prompt</label>
+                <input type="text" id="customPrompt" placeholder="e.g., tanned skin, short hair">
+            </div>
+            <div class="control-group">
+                <label>Negative Prompt</label>
+                <input type="text" id="negativePrompt" value="clothed, underwear, deformed, bad anatomy, blurry, low quality">
+            </div>
+            <div class="control-group">
+                <label>Width / Height</label>
+                <input type="text" id="resolution" value="1024x1024">
+            </div>
+            <div class="control-group">
+                <label>Steps</label>
+                <input type="number" id="steps" value="50" min="20" max="100">
+            </div>
+            <div class="control-group">
+                <label>Guidance Scale</label>
+                <input type="number" id="guidance" value="7.5" step="0.5">
+            </div>
+            <button id="generateBtn" class="generate-btn">🔥 GENERATE</button>
+            <div id="status" class="status"></div>
+        </div>
+        <div class="gallery-panel">
+            <div id="gallery" class="gallery">
+                <div class="empty-state"><span>⚡</span><p>Awaiting your command, Butter</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const generateBtn = document.getElementById('generateBtn');
+    const gallery = document.getElementById('gallery');
+    const status = document.getElementById('status');
+    generateBtn.addEventListener('click', async () => {
+        const res = document.getElementById('resolution').value.split('x');
+        const payload = {
+            body_type: document.getElementById('bodyType').value,
+            custom_prompt: document.getElementById('customPrompt').value,
+            negative_prompt: document.getElementById('negativePrompt').value,
+            width: parseInt(res[0]) || 1024,
+            height: parseInt(res[1]) || 1024,
+            steps: parseInt(document.getElementById('steps').value),
+            guidance_scale: parseFloat(document.getElementById('guidance').value),
+            seed: null,
+            batch_count: 1
+        };
+        generateBtn.disabled = true;
+        generateBtn.textContent = '⏳ GENERATING...';
+        status.textContent = '⚡ Forging reality...';
+        status.style.color = '#ff6b6b';
+        try {
+            const response = await fetch('/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            if (!data.success) throw new Error(data.error);
+            gallery.innerHTML = '';
+            data.results.forEach((result) => {
+                const card = document.createElement('div');
+                card.className = 'image-card';
+                const img = document.createElement('img');
+                img.src = `data:image/png;base64,${result.image}`;
+                const info = document.createElement('div');
+                info.className = 'seed-info';
+                info.textContent = `🧬 SEED: ${result.seed}`;
+                card.appendChild(img);
+                card.appendChild(info);
+                gallery.appendChild(card);
+            });
+            status.textContent = `✅ Generated ${data.count} images!`;
+            status.style.color = '#6bff6b';
+        } catch (error) {
+            status.textContent = `❌ ERROR: ${error.message}`;
+            status.style.color = '#ff6b6b';
+        } finally {
+            generateBtn.disabled = false;
+            generateBtn.textContent = '🔥 GENERATE';
+        }
+    });
+});
+</script>
+</body>
+</html>
